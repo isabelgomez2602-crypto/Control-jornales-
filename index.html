@@ -746,7 +746,7 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     appSettings = {
-                        horasPorDia: Number(data.horasPorDia || data.hoursPerDay) || 8,
+                        horasPorDia: Number(data.horasPorDia || data.hoursPerDay) || 7,
                         tarifaNormal: data.tarifaNormal !== undefined ? Number(data.tarifaNormal) : (data.dayRate !== undefined ? Number(data.dayRate) : 60000),
                         tarifaGuadana: data.tarifaGuadana !== undefined ? Number(data.tarifaGuadana) : 100000,
                         adminPhone: data.adminPhone || '',
@@ -804,7 +804,7 @@
         }
 
         function getRecordMoney(rec) {
-            const horasPorDia = appSettings.horasPorDia || 8;
+            const horasPorDia = appSettings.horasPorDia || 7;
             const tipo = rec.tipoLabor || 'normal';
             const tarifa = getTarifaByLabor(tipo);
             return Math.round((Number(rec.hours || 0) / horasPorDia) * tarifa);
