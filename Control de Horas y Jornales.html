@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Horas y Jornales</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        forest: {
+                            50: '#f2f8f4',
+                            100: '#e0efe5',
+                            200: '#c2dfcc',
+                            500: '#2d8a57',
+                            600: '#206f44',
+                            700: '#1a5837',
+                            800: '#17472d',
+                            900: '#143b26',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-forest-200 selection:text-forest-900">
+
+    <!-- Barra Superior -->
+    <header class="bg-forest-800 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+            <button onclick="navigateTo('home')" class="flex items-center gap-2.5 text-left focus:outline-none group">
+                <div class="bg-forest-600 group-hover:bg-forest-500 p-2 rounded-xl transition">
+                    <i data-lucide="clock" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg leading-tight">Control de Jornales</h1>
+                    <p class="text-xs text-forest-200 flex items-center gap-1.5">
+                        <span id="sync-dot" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+                        <span id="sync-status">Conectando...</span>
+                    </p>
+                </div>
+            </button>
+
+            <div class="flex items-center gap-2">
+                <button id="btn-header-home" onclick="navigateTo('home')" class="hidden bg-forest-700 hover:bg-forest-600 text-white text-xs sm:text-sm font-medium px-3 py-2 rounded-xl flex items-center gap-1.5 transition">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <span>Inicio</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notificación Flotante (Toast) -->
+    <div id="toast-container" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md pointer-events-none flex flex-col gap-2"></div>
+
+    <!-- Contenedor Principal -->
+    <main class="flex-1 max-w-3xl w-full mx-auto px-4 py-6">
+
+        <!-- ========================================== -->
+        <!-- VISTA 1: INICIO Y SELECCIÓN DE ROL         -->
+        <!-- ========================================== -->
+        <section id="view-home" class="space-y-6">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 text-center space-y-2">
+                <span class="inline-block bg-forest-100 text-forest-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                    Registro Diario en Tiempo Real
+                </span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">¿Cómo deseas ingresar?</h2>
+                <p class="text-slate-600 text-sm sm:text-base max-w-md mx-auto">
+                    Registra las horas trabajadas (2 horas, medio día o día completo) y consulta los días acumulados al instante.
+                </p>
+            </div>
+
+            <!-- Tarjetas de Selección de Rol -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Rol Trabajador -->
+                <button onclick="navigateTo('worker')" class="bg-white hover:bg-forest-50/60 active:scale-[0.99] transition-all p-6 rounded-2xl shadow-sm border-2 border-forest-600/20 hover:border-forest-600 text-left flex flex-col justify-between group">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-forest-100 text-forest-700 flex items-center justify-center group-hover:bg-forest-600 group-hover:text-white transition">
+                            <i data-lucide="hard-hat" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900">Soy Trabajador</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Anota las horas que trabajaste hoy (normal o guadañando) y mira cuánto llevas acumulado.
+                        </p>
+                    </div>
+                    <div class="mt-6 flex items-center text-forest-700 font-semibold text-sm">
+                        <span>Registrar mis horas</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                </button>
+
+                <!-- Rol Administrador -->
+                <button onclick="openAdminGate()" class="bg-white hover:bg-slate-50 active:scale-[0.99] transition-all p-6 rounded-2xl shadow-sm border-2 border-slate-200 hover:border-slate-400 text-left flex flex-col justify-between group">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition">
+                            <i data-lucide="shield-check" class="w-6 h-6"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900">Soy Administrador</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">
+                            Revisa las horas normales y guadañando de cada trabajador, calcula el pago y liquida jornales.
+                        </p>
+                    </div>
+                    <div class="mt-6 flex items-center text-slate-800 font-semibold text-sm">
+                        <span>Entrar al panel</span>
+                        <i data-lucide="lock" class="w-4 h-4 ml-1.5 text-slate-500"></i>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Tarjeta para Compartir la App con el Trabajador -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-3">
+                <div class="flex items-start gap-3">
+                    <div class="bg-emerald-100 text-emerald-700 p-2.5 rounded-xl shrink-0">
+                        <i data-lucide="smartphone" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-slate-900 text-sm sm:text-base">Enviar aplicación al trabajador</h4>
+                        <p class="text-xs sm:text-sm text-slate-600 mt-0.5">
+                            Ingresa el número de WhatsApp del trabajador para mandarle su enlace directo con su nombre listo.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Campo editable de enlace por si se abre desde vista previa o enlace publicado -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center gap-2">
+                    <i data-lucide="link" class="w-4 h-4 text-slate-400 shrink-0 ml-1"></i>
+                    <input type="text" id="share-app-url-input" oninput="updateAllWhatsAppLinks()"
+                        class="w-full bg-transparent text-xs text-slate-700 font-medium focus:outline-none truncate"
+                        placeholder="Enlace de la aplicación...">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    <button type="button" onclick="openSendAppModal()"
+                        class="w-full bg-[#25D366] hover:bg-[#20bd5a] active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-xs transition cursor-pointer">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                        <span>Enviar App a un Trabajador</span>
+                    </button>
+                    <button type="button" onclick="copyAppLink()" class="w-full bg-slate-100 hover:bg-slate-200 active:scale-[0.99] text-slate-800 font-semibold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                        <span>Copiar Enlace</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VISTA 2: PANEL DEL TRABAJADOR              -->
+        <!-- ========================================== -->
+        <section id="view-worker" class="hidden space-y-6">
+            <!-- Barra superior rápida del trabajador: Instalar en celular / Cambiar usuario -->
+            <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+                    <span class="w-2 h-2 rounded-full bg-forest-600"></span>
+                    <span>Modo Trabajador Activo</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="openInstallModal()"
+                        class="bg-forest-50 hover:bg-forest-100 text-forest-800 border border-forest-200 font-bold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Guardar en mi Celular</span>
+                    </button>
+                    <button type="button" onclick="navigateTo('home')"
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs px-3 py-2 rounded-xl transition">
+                        Inicio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tarjeta de Progreso del Trabajador -->
+            <div class="bg-gradient-to-br from-forest-800 to-forest-900 text-white rounded-2xl p-5 sm:p-6 shadow-md">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-forest-200">Tu Acumulado Pendiente</span>
+                    <span id="worker-jornal-rule" class="text-xs bg-forest-700/80 px-2.5 py-1 rounded-full text-forest-100">1 día = 8 horas</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3.5">
+                        <p class="text-forest-200 text-xs">Horas Acumuladas</p>
+                        <p class="text-3xl font-extrabold mt-0.5" id="worker-total-hours">0 h</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-3.5">
+                        <p class="text-forest-200 text-xs">Días Completos</p>
+                        <p class="text-3xl font-extrabold text-emerald-300 mt-0.5" id="worker-total-days">0 días</p>
+                    </div>
+                </div>
+
+                <!-- Valor acumulado estimado -->
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2.5 flex items-center justify-between mb-4">
+                    <span class="text-xs text-forest-200 font-medium">Total acumulado por cobrar:</span>
+                    <span class="text-lg font-extrabold text-amber-300" id="worker-total-money">$0</span>
+                </div>
+
+                <!-- Barra de progreso hacia el siguiente día completo -->
+                <div class="space-y-1.5">
+                    <div class="flex justify-between text-xs text-forest-200">
+                        <span>Progreso para completar el siguiente día</span>
+                        <span id="worker-fraction-text" class="font-bold text-white">0 / 8 hrs</span>
+                    </div>
+                    <div class="w-full bg-forest-950/60 rounded-full h-3 overflow-hidden p-0.5">
+                        <div id="worker-progress-bar" class="bg-emerald-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulario de Registro de Horas -->
+            <form id="worker-form" onsubmit="submitWorkHours(event)" class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-5">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="plus-circle" class="w-5 h-5 text-forest-600"></i>
+                    <span>Registrar Horas Trabajadas</span>
+                </h3>
+
+                <!-- Nombre del trabajador -->
+                <div>
+                    <label for="worker-name" class="block text-sm font-semibold text-slate-700 mb-1.5">Tu Nombre Completo</label>
+                    <input type="text" id="worker-name" required placeholder="Ej. Carlos Pérez"
+                        oninput="onWorkerNameChange()"
+                        class="w-full text-base px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-forest-600 focus:outline-none transition bg-slate-50 focus:bg-white font-medium">
+                    <!-- Chips de nombres ya registrados para seleccionar con 1 toque -->
+                    <div id="existing-workers-chips" class="flex flex-wrap gap-1.5 mt-2"></div>
+                </div>
+
+                <!-- Fecha -->
+                <div>
+                    <label for="work-date" class="block text-sm font-semibold text-slate-700 mb-1.5">Fecha del trabajo</label>
+                    <input type="date" id="work-date" required
+                        class="w-full text-base px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-forest-600 focus:outline-none bg-slate-50 font-medium">
+                </div>
+
+                <!-- Tipo de Labor: Trabajo Normal ($60.000) vs Guadañando ($100.000) -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">¿Qué tipo de labor hiciste?</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button type="button" id="btn-labor-normal" onclick="selectLaborType('normal')"
+                            class="border-2 border-forest-600 bg-forest-50 ring-2 ring-forest-600/20 rounded-xl p-3.5 text-left transition flex items-center gap-3">
+                            <div class="bg-forest-600 text-white p-2.5 rounded-xl shrink-0">
+                                <i data-lucide="sprout" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <span class="block font-extrabold text-slate-900 text-sm">Trabajo Normal</span>
+                                <span class="block text-xs font-bold text-forest-700" id="label-tarifa-normal">$60.000 / día</span>
+                            </div>
+                        </button>
+
+                        <button type="button" id="btn-labor-guadana" onclick="selectLaborType('guadana')"
+                            class="border-2 border-slate-200 bg-slate-50 hover:border-amber-500 rounded-xl p-3.5 text-left transition flex items-center gap-3">
+                            <div class="bg-amber-500 text-white p-2.5 rounded-xl shrink-0">
+                                <i data-lucide="scissors" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <span class="block font-extrabold text-slate-900 text-sm">Guadañando</span>
+                                <span class="block text-xs font-bold text-amber-700" id="label-tarifa-guadana">$100.000 / día</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Botones Rápidos de Horas -->
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">¿Cuánto tiempo trabajaste?</label>
+                    <div class="grid grid-cols-3 gap-2.5 mb-3">
+                        <button type="button" onclick="selectQuickHours(2, this)" class="quick-hour-btn border-2 border-slate-200 hover:border-forest-500 rounded-xl p-3 text-center transition flex flex-col items-center justify-center bg-slate-50">
+                            <span class="text-lg font-extrabold text-slate-900">2 hrs</span>
+                            <span class="text-[11px] font-medium text-slate-500" id="hint-2h">$15.000</span>
+                        </button>
+                        <button type="button" onclick="selectQuickHours(4, this)" class="quick-hour-btn border-2 border-slate-200 hover:border-forest-500 rounded-xl p-3 text-center transition flex flex-col items-center justify-center bg-slate-50">
+                            <span class="text-lg font-extrabold text-slate-900">4 hrs</span>
+                            <span class="text-[11px] text-forest-700 font-semibold" id="hint-4h">Medio • $30.000</span>
+                        </button>
+                        <button type="button" onclick="selectQuickHours(8, this)" class="quick-hour-btn border-2 border-slate-200 hover:border-forest-500 rounded-xl p-3 text-center transition flex flex-col items-center justify-center bg-slate-50">
+                            <span class="text-lg font-extrabold text-slate-900">8 hrs</span>
+                            <span class="text-[11px] text-forest-700 font-semibold" id="hint-8h">Día • $60.000</span>
+                        </button>
+                    </div>
+
+                    <!-- Campo numérico personalizado -->
+                    <div class="relative">
+                        <input type="number" id="work-hours" step="0.5" min="0.5" max="24" required placeholder="O escribe otras horas (Ej. 3, 5.5, 6)"
+                            oninput="onCustomHoursInput()"
+                            class="w-full text-lg font-bold px-4 py-3.5 pr-16 rounded-xl border-2 border-slate-300 focus:border-forest-600 focus:outline-none">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">horas</span>
+                    </div>
+
+                    <!-- Cálculo proporcional instantáneo -->
+                    <div id="live-calc-box" class="hidden mt-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 flex items-center justify-between">
+                        <span class="text-xs font-semibold text-emerald-900" id="live-calc-label">Equivale a 0.5 días (Normal)</span>
+                        <span class="text-base font-extrabold text-emerald-800" id="live-calc-money">$30.000</span>
+                    </div>
+                </div>
+
+                <!-- Nota opcional de la labor -->
+                <div>
+                    <label for="work-note" class="block text-sm font-semibold text-slate-700 mb-1.5">
+                        Labor realizada <span class="text-slate-400 font-normal">(Opcional)</span>
+                    </label>
+                    <input type="text" id="work-note" placeholder="Ej. Limpieza de lote, guadaña potrero, cosecha, cerca..."
+                        class="w-full text-base px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-forest-600 focus:outline-none bg-slate-50">
+                </div>
+
+                <!-- Botón Guardar -->
+                <button type="submit" id="btn-submit-hours" class="w-full bg-forest-700 hover:bg-forest-800 active:scale-[0.99] text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-forest-700/20 flex items-center justify-center gap-2 transition">
+                    <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                    <span>Guardar Mis Horas</span>
+                </button>
+
+                <!-- Enlace directo para avisar al Administrador por WhatsApp tras guardar -->
+                <div id="worker-whatsapp-confirm" class="hidden pt-1">
+                    <a id="link-worker-notify-wa" href="https://api.whatsapp.com/send?text=" target="_blank" rel="noopener noreferrer"
+                        onclick="handleWhatsAppClick(event, 'worker_report')"
+                        class="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-sm transition cursor-pointer no-underline">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i>
+                        <span>Avisar al Jefe por WhatsApp</span>
+                    </a>
+                </div>
+            </form>
+
+            <!-- Historial Reciente del Trabajador -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-slate-900">Tus Registros Recientes</h3>
+                    <span id="worker-history-count" class="text-xs font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">0 registros</span>
+                </div>
+                <div id="worker-history-list" class="space-y-2.5">
+                    <p class="text-sm text-slate-500 text-center py-6">Escribe tu nombre arriba para ver tus horas registradas.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VISTA 3: PANEL DE ADMINISTRADOR            -->
+        <!-- ========================================== -->
+        <section id="view-admin" class="hidden space-y-6">
+            <!-- Encabezado y Acciones Rápidas -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-forest-700">Modo Administrador</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Control General de Jornales</h2>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="toggleAdminSettings()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-3.5 py-2.5 rounded-xl text-sm flex items-center gap-1.5 transition">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                        <span>Configurar</span>
+                    </button>
+                    <button type="button" onclick="openSendAppModal()"
+                        class="bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold px-3.5 py-2.5 rounded-xl text-sm flex items-center gap-1.5 transition cursor-pointer shadow-xs">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                        <span>Enviar App a un Trabajador</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel Desplegable de Configuración -->
+            <div id="admin-settings-panel" class="hidden bg-white p-5 rounded-2xl shadow-sm border-2 border-forest-600/30 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-forest-700"></i>
+                        <span>Configuración de Jornales, Tarifas y WhatsApp</span>
+                    </h3>
+                    <button onclick="toggleAdminSettings()" class="text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Horas por 1 Día</label>
+                        <input type="number" id="cfg-hours-per-day" step="0.5" min="1" max="24" value="8"
+                            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-forest-600 focus:outline-none font-bold text-slate-900">
+                        <p class="text-[11px] text-slate-500 mt-1">Ej. 8 horas = 1 jornal</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-forest-800 uppercase mb-1">Día Normal ($)</label>
+                        <input type="number" id="cfg-tarifa-normal" step="1000" min="0" value="60000"
+                            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-forest-200 focus:border-forest-600 focus:outline-none font-bold text-slate-900">
+                        <p class="text-[11px] text-slate-500 mt-1">Por defecto $60.000</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-amber-800 uppercase mb-1">Día Guadañando ($)</label>
+                        <input type="number" id="cfg-tarifa-guadana" step="1000" min="0" value="100000"
+                            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-amber-200 focus:border-amber-500 focus:outline-none font-bold text-slate-900">
+                        <p class="text-[11px] text-slate-500 mt-1">Por defecto $100.000</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-emerald-800 uppercase mb-1">Tu WhatsApp (Jefe)</label>
+                        <input type="tel" id="cfg-admin-phone" placeholder="Ej. 3101234567"
+                            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-emerald-200 focus:border-emerald-600 focus:outline-none font-bold text-slate-900">
+                        <p class="text-[11px] text-slate-500 mt-1">Para recibir avisos directos</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">PIN Administrador</label>
+                        <input type="text" id="cfg-admin-pin" maxlength="6" pattern="[0-9]*" inputmode="numeric" value="1234"
+                            class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-forest-600 focus:outline-none font-bold text-slate-900 tracking-widest">
+                        <p class="text-[11px] text-slate-500 mt-1">4 dígitos numéricos</p>
+                    </div>
+                </div>
+                <div class="flex justify-end pt-2">
+                    <button onclick="saveAdminSettings()" class="bg-forest-700 hover:bg-forest-800 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">
+                        Guardar Configuración
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tarjetas de Resumen Global (Pendientes por Liquidar) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                    <p class="text-xs font-bold text-slate-500 uppercase">Horas Pendientes</p>
+                    <p class="text-3xl font-extrabold text-slate-900 mt-1" id="admin-stat-hours">0 h</p>
+                    <p class="text-xs text-slate-500 mt-1" id="admin-stat-records-count">0 registros sin pagar</p>
+                </div>
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                    <p class="text-xs font-bold text-slate-500 uppercase">Jornales Completos</p>
+                    <p class="text-3xl font-extrabold text-forest-700 mt-1" id="admin-stat-days">0 días</p>
+                    <p class="text-xs text-slate-500 mt-1" id="admin-stat-rem-hours">+ 0 horas sueltas</p>
+                </div>
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+                    <p class="text-xs font-bold text-slate-500 uppercase">Total a Liquidar</p>
+                    <p class="text-3xl font-extrabold text-emerald-700 mt-1" id="admin-stat-money">$0</p>
+                    <p class="text-xs text-slate-500 mt-1" id="admin-stat-rate-info">Normal $60.000 | Guadaña $100.000</p>
+                </div>
+            </div>
+
+            <!-- Resumen Agrupado por Trabajador -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-extrabold text-slate-900">Resumen por Trabajador (Pendiente)</h3>
+                </div>
+                <div id="admin-workers-summary" class="space-y-3">
+                    <p class="text-sm text-slate-500 text-center py-4">Aún no hay horas pendientes registradas.</p>
+                </div>
+            </div>
+
+            <!-- Filtros y Listado Detallado de Todos los Registros -->
+            <div class="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h3 class="text-lg font-extrabold text-slate-900">Detalle de Registros</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <a id="link-admin-summary-wa" href="https://api.whatsapp.com/send?text=" target="_blank" rel="noopener noreferrer"
+                            onclick="handleWhatsAppClick(event, 'admin_summary')"
+                            class="bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition cursor-pointer no-underline">
+                            <i data-lucide="message-circle" class="w-4 h-4"></i>
+                            <span>Enviar Resumen WhatsApp</span>
+                        </a>
+                        <button onclick="copySummaryForWhatsApp()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition">
+                            <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                            <span>Copiar Texto</span>
+                        </button>
+                        <button onclick="exportToCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold px-3 py-2 rounded-xl text-xs flex items-center gap-1.5 transition">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>Exportar CSV</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Controles de Filtro -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200/70">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Filtrar por trabajador</label>
+                        <select id="filter-worker" onchange="renderAdminView()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:outline-none focus:border-forest-600">
+                            <option value="ALL">Todos los trabajadores</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Estado del pago</label>
+                        <select id="filter-status" onchange="renderAdminView()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:outline-none focus:border-forest-600">
+                            <option value="ALL">Todos (Pendientes y Pagados)</option>
+                            <option value="pending" selected>Solo Pendientes por Pagar</option>
+                            <option value="paid">Solo Pagados / Liquidados</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Lista de Registros -->
+                <div id="admin-records-list" class="space-y-2.5">
+                    <p class="text-sm text-slate-500 text-center py-6">Cargando registros...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODAL: ENVIAR APP A TRABAJADOR (WHATSAPP)  -->
+    <!-- ========================================== -->
+    <div id="modal-send-app" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <span class="bg-[#25D366]/15 text-[#1ea851] p-1.5 rounded-lg">
+                        <i data-lucide="message-circle" class="w-5 h-5"></i>
+                    </span>
+                    <span>Enviar App por WhatsApp</span>
+                </h3>
+                <button onclick="closeSendAppModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nombre del Trabajador (Opcional)</label>
+                    <input type="text" id="send-app-worker-name" placeholder="Ej. Carlos Pérez"
+                        oninput="onSendAppInputChange()"
+                        class="w-full px-3.5 py-2.5 rounded-xl border-2 border-slate-200 focus:border-forest-600 focus:outline-none font-semibold text-sm">
+                    <div id="send-app-worker-chips" class="flex flex-wrap gap-1.5 mt-1.5"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Número de WhatsApp del Trabajador</label>
+                    <div class="flex items-center rounded-xl border-2 border-slate-200 focus-within:border-[#25D366] overflow-hidden bg-slate-50 focus-within:bg-white">
+                        <span class="px-3 py-2.5 bg-slate-100 text-slate-700 font-bold text-sm border-r border-slate-200 select-none">🇨🇴 +57</span>
+                        <input type="tel" id="send-app-worker-phone" inputmode="numeric" placeholder="Ej. 310 456 7890"
+                            oninput="onSendAppInputChange()"
+                            class="w-full px-3 py-2.5 bg-transparent focus:outline-none font-bold text-slate-900 text-base">
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-1">Se guardará este número para enviarle sus cuentas luego con un toque.</p>
+                </div>
+
+                <!-- Vista Previa del Mensaje -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-600 uppercase">Vista previa del mensaje</span>
+                        <span class="text-[11px] text-emerald-700 font-semibold">Con enlace directo</span>
+                    </div>
+                    <div id="send-app-preview-box"
+                        class="bg-[#e7ffdb] border border-[#c6e9b4] text-slate-800 rounded-2xl rounded-tr-xs p-3.5 text-xs leading-relaxed whitespace-pre-line font-medium shadow-2xs max-h-48 overflow-y-auto">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2 pt-2">
+                <button type="button" onclick="copyInviteMessage()"
+                    class="sm:flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-1.5 transition">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                    <span>Copiar Mensaje</span>
+                </button>
+                <a id="btn-confirm-send-wa" href="https://api.whatsapp.com/send?text=" target="_blank" rel="noopener noreferrer"
+                    onclick="executeSendAppWhatsApp(event)"
+                    class="sm:flex-[1.5] bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-sm transition cursor-pointer no-underline">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Abrir WhatsApp y Enviar</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: INSTRUCCIONES GUARDAR EN CELULAR    -->
+    <!-- ========================================== -->
+    <div id="modal-install-app" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="smartphone" class="w-5 h-5 text-forest-700"></i>
+                    <span>Guardar en tu Celular</span>
+                </h3>
+                <button onclick="closeInstallModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Deja esta aplicación en la pantalla principal de tu teléfono para entrar rápido todos los días sin buscar el enlace:
+            </p>
+
+            <div class="space-y-3 text-xs">
+                <div class="bg-forest-50 border border-forest-200 rounded-xl p-3.5 space-y-1.5">
+                    <p class="font-extrabold text-forest-900 flex items-center gap-1.5">
+                        <span>📱 En Android (Chrome):</span>
+                    </p>
+                    <p class="text-slate-700">1. Toca los <strong>3 puntitos (⋮)</strong> arriba a la derecha.</p>
+                    <p class="text-slate-700">2. Toca <strong>"Agregar a la pantalla principal"</strong> o <strong>"Instalar aplicación"</strong>.</p>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5">
+                    <p class="font-extrabold text-slate-900 flex items-center gap-1.5">
+                        <span>🍏 En iPhone (Safari):</span>
+                    </p>
+                    <p class="text-slate-700">1. Toca el botón <strong>Compartir (□↑)</strong> abajo en el centro.</p>
+                    <p class="text-slate-700">2. Baja y toca <strong>"Agregar a inicio"</strong>.</p>
+                </div>
+            </div>
+
+            <button type="button" onclick="closeInstallModal()"
+                class="w-full bg-forest-700 hover:bg-forest-800 text-white font-bold py-3 rounded-xl text-sm transition">
+                ¡Entendido!
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CONFIRMACIÓN PERSONALIZADA          -->
+    <!-- ========================================== -->
+    <div id="modal-confirm" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4">
+            <h3 id="confirm-title" class="text-lg font-extrabold text-slate-900">Confirmar acción</h3>
+            <p id="confirm-message" class="text-sm text-slate-600 leading-relaxed"></p>
+            <div class="flex gap-2 pt-1">
+                <button onclick="closeConfirmModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl text-sm">Cancelar</button>
+                <button id="confirm-btn-ok" class="flex-1 bg-forest-700 hover:bg-forest-800 text-white font-bold py-2.5 rounded-xl text-sm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- LÓGICA FIREBASE Y DE LA APLICACIÓN         -->
+    <!-- ========================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {
+            getFirestore, doc, setDoc, addDoc, updateDoc, deleteDoc,
+            onSnapshot, collection
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuración Firebase del entorno
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+
+        // Estado global en memoria sincronizado en tiempo real
+        let allRecords = [];
+        let workerPhones = {}; // Mapa { "Nombre Normalizado": "573001234567" }
+        let appSettings = {
+            horasPorDia: 8,
+            tarifaNormal: 60000,
+            tarifaGuadana: 100000,
+            adminPhone: '',
+            pinAdmin: '1234'
+        };
+        let selectedLaborType = 'normal'; // 'normal' o 'guadana'
+        let lastSavedRecord = null;
+        let isAdminAuthenticated = false;
+        let pendingConfirmCallback = null;
+
+        // Inicializar iconos y fecha de hoy
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('work-date').value = today;
+
+            // Detectar mejor enlace posible (evitando about:srcdoc en iframes)
+            initShareUrl();
+
+            // Verificar parámetros de URL (?trabajador=Nombre o ?modo=trabajador o ?rol=trabajador)
+            const params = new URLSearchParams(window.location.search);
+            const trabajadorParam = params.get('trabajador');
+            const modoParam = params.get('modo') || params.get('rol');
+
+            if (trabajadorParam) {
+                const cleanWorker = normalizeName(decodeURIComponent(trabajadorParam));
+                document.getElementById('worker-name').value = cleanWorker;
+                navigateTo('worker');
+            } else if (modoParam === 'trabajador') {
+                navigateTo('worker');
+            }
+
+            updateAllWhatsAppLinks();
+        });
+
+        function detectBestAppUrl() {
+            try {
+                if (window.top && window.top.location && window.top.location.href && !window.top.location.href.startsWith('about:')) {
+                    return window.top.location.href.split('#')[0];
+                }
+            } catch (e) {
+                // Acceso cross-origin bloqueado por iframe, usar fallback
+            }
+            if (window.location && window.location.href && !window.location.href.startsWith('about:')) {
+                return window.location.href.split('#')[0];
+            }
+            return '';
+        }
+
+        function initShareUrl() {
+            const urlInput = document.getElementById('share-app-url-input');
+            const detected = detectBestAppUrl();
+            urlInput.value = detected;
+        }
+
+        function getShareableAppUrl() {
+            const urlInput = document.getElementById('share-app-url-input');
+            const val = urlInput ? urlInput.value.trim() : '';
+            if (val) return val;
+            return detectBestAppUrl();
+        }
+
+        // Inicialización de Firebase Auth y Firestore
+        async function initFirebase() {
+            if (!firebaseConfig) {
+                updateSyncStatus('Sin conexión nube', 'bg-red-500');
+                return;
+            }
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // RULE 3: Autenticar primero antes de cualquier consulta
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) {
+                        updateSyncStatus('Sincronizado en vivo', 'bg-emerald-400');
+                        startRealtimeListeners();
+                    }
+                });
+            } catch (err) {
+                console.error("Error inicializando Firebase:", err);
+                updateSyncStatus('Error de conexión', 'bg-red-500');
+                showToast('Error al conectar con la base de datos.', 'error');
+            }
+        }
+
+        function updateSyncStatus(text, dotClass) {
+            document.getElementById('sync-status').textContent = text;
+            const dot = document.getElementById('sync-dot');
+            dot.className = `w-2 h-2 rounded-full inline-block ${dotClass}`;
+        }
+
+        // Suscripciones en tiempo real a Firestore (RULE 1 & RULE 2)
+        function startRealtimeListeners() {
+            if (!currentUser || !db) return;
+
+            const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'general');
+            // Escuchar cambios en la configuración (horasPorDia, tarifaNormal, tarifaGuadana, adminPhone, pinAdmin)
+            onSnapshot(configDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    appSettings = {
+                        horasPorDia: Number(data.horasPorDia || data.hoursPerDay) || 8,
+                        tarifaNormal: data.tarifaNormal !== undefined ? Number(data.tarifaNormal) : (data.dayRate !== undefined ? Number(data.dayRate) : 60000),
+                        tarifaGuadana: data.tarifaGuadana !== undefined ? Number(data.tarifaGuadana) : 100000,
+                        adminPhone: data.adminPhone || '',
+                        pinAdmin: data.pinAdmin || data.adminPin || '1234'
+                    };
+                    workerPhones = data.workerPhones || {};
+                } else {
+                    setDoc(configDocRef, { ...appSettings, workerPhones }).catch(err => console.error(err));
+                }
+                syncSettingsUI();
+                refreshActiveViews();
+            }, (error) => {
+                console.error("Error escuchando configuración:", error);
+            });
+
+            // Escuchar todos los registros de horas sin consultas compuestas
+            onSnapshot(logsColRef, (snapshot) => {
+                const records = [];
+                snapshot.forEach((docItem) => {
+                    records.push({ id: docItem.id, ...docItem.data() });
+                });
+
+                // Ordenar en memoria: fecha más reciente primero, luego creación
+                records.sort((a, b) => {
+                    if (b.date !== a.date) return (b.date || '').localeCompare(a.date || '');
+                    return (b.createdAt || 0) - (a.createdAt || 0);
+                });
+
+                allRecords = records;
+                refreshActiveViews();
+            }, (error) => {
+                console.error("Error escuchando registros:", error);
+                showToast('Error al recibir registros en tiempo real.', 'error');
+            });
+        }
+
+        function syncSettingsUI() {
+            document.getElementById('cfg-hours-per-day').value = appSettings.horasPorDia;
+            document.getElementById('cfg-tarifa-normal').value = appSettings.tarifaNormal;
+            document.getElementById('cfg-tarifa-guadana').value = appSettings.tarifaGuadana;
+            document.getElementById('cfg-admin-phone').value = appSettings.adminPhone || '';
+            document.getElementById('cfg-admin-pin').value = appSettings.pinAdmin;
+
+            document.getElementById('worker-jornal-rule').textContent = `1 día = ${appSettings.horasPorDia} horas`;
+            document.getElementById('label-tarifa-normal').textContent = `${formatCOP(appSettings.tarifaNormal)} / día`;
+            document.getElementById('label-tarifa-guadana').textContent = `${formatCOP(appSettings.tarifaGuadana)} / día`;
+
+            updateQuickHourHints();
+            updateLiveCalc();
+            updateAllWhatsAppLinks();
+        }
+
+        function getTarifaByLabor(tipoLabor) {
+            return tipoLabor === 'guadana' ? (appSettings.tarifaGuadana || 100000) : (appSettings.tarifaNormal || 60000);
+        }
+
+        function getRecordMoney(rec) {
+            const horasPorDia = appSettings.horasPorDia || 8;
+            const tipo = rec.tipoLabor || 'normal';
+            const tarifa = getTarifaByLabor(tipo);
+            return Math.round((Number(rec.hours || 0) / horasPorDia) * tarifa);
+        }
+
+        function refreshActiveViews() {
+            updateWorkerChips();
+            if (!document.getElementById('view-worker').classList.contains('hidden')) {
+                renderWorkerView();
+            }
+            if (!document.getElementById('view-admin').classList.contains('hidden')) {
+                renderAdminView();
+            }
+            updateAllWhatsAppLinks();
+        }
+
+        // ==========================================
+        // NAVEGACIÓN ENTRE VISTAS
+        // ==========================================
+        window.navigateTo = function(viewName) {
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-worker').classList.add('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
+
+            const headerHomeBtn = document.getElementById('btn-header-home');
+
+            if (viewName === 'home') {
+                document.getElementById('view-home').classList.remove('hidden');
+                headerHomeBtn.classList.add('hidden');
+            } else if (viewName === 'worker') {
+                document.getElementById('view-worker').classList.remove('hidden');
+                headerHomeBtn.classList.remove('hidden');
+                renderWorkerView();
+            } else if (viewName === 'admin') {
+                document.getElementById('view-admin').classList.remove('hidden');
+                headerHomeBtn.classList.remove('hidden');
+                renderAdminView();
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // ==========================================
+        // LÓGICA DEL TRABAJADOR
+        // ==========================================
+        window.selectLaborType = function(tipo) {
+            selectedLaborType = tipo;
+            const btnNormal = document.getElementById('btn-labor-normal');
+            const btnGuadana = document.getElementById('btn-labor-guadana');
+
+            if (tipo === 'normal') {
+                btnNormal.className = 'border-2 border-forest-600 bg-forest-50 ring-2 ring-forest-600/20 rounded-xl p-3.5 text-left transition flex items-center gap-3';
+                btnGuadana.className = 'border-2 border-slate-200 bg-slate-50 hover:border-amber-500 rounded-xl p-3.5 text-left transition flex items-center gap-3';
+            } else {
+                btnGuadana.className = 'border-2 border-amber-500 bg-amber-50 ring-2 ring-amber-500/20 rounded-xl p-3.5 text-left transition flex items-center gap-3';
+                btnNormal.className = 'border-2 border-slate-200 bg-slate-50 hover:border-forest-500 rounded-xl p-3.5 text-left transition flex items-center gap-3';
+            }
+
+            updateQuickHourHints();
+            updateLiveCalc();
+        };
+
+        function updateQuickHourHints() {
+            const hpd = appSettings.horasPorDia || 8;
+            const tarifa = getTarifaByLabor(selectedLaborType);
+
+            document.getElementById('hint-2h').textContent = formatCOP(Math.round((2 / hpd) * tarifa));
+            document.getElementById('hint-4h').textContent = `Medio • ${formatCOP(Math.round((4 / hpd) * tarifa))}`;
+            document.getElementById('hint-8h').textContent = `Día • ${formatCOP(Math.round((8 / hpd) * tarifa))}`;
+        }
+
+        function updateLiveCalc() {
+            const hours = parseFloat(document.getElementById('work-hours').value);
+            const box = document.getElementById('live-calc-box');
+            if (!hours || hours <= 0) {
+                box.classList.add('hidden');
+                return;
+            }
+            const hpd = appSettings.horasPorDia || 8;
+            const tarifa = getTarifaByLabor(selectedLaborType);
+            const valor = Math.round((hours / hpd) * tarifa);
+            const diasFrac = +(hours / hpd).toFixed(2);
+            const etiqueta = selectedLaborType === 'guadana' ? 'Guadañando' : 'Normal';
+
+            document.getElementById('live-calc-label').textContent = `Equivale a ${diasFrac} ${diasFrac === 1 ? 'día' : 'días'} (${etiqueta})`;
+            document.getElementById('live-calc-money').textContent = formatCOP(valor);
+            box.classList.remove('hidden');
+        }
+
+        window.selectQuickHours = function(hours, btnElement) {
+            document.getElementById('work-hours').value = hours;
+            document.querySelectorAll('.quick-hour-btn').forEach(btn => {
+                btn.classList.remove('border-forest-600', 'bg-forest-50', 'ring-2', 'ring-forest-600/20');
+                btn.classList.add('border-slate-200', 'bg-slate-50');
+            });
+            btnElement.classList.remove('border-slate-200', 'bg-slate-50');
+            btnElement.classList.add('border-forest-600', 'bg-forest-50', 'ring-2', 'ring-forest-600/20');
+            updateLiveCalc();
+        };
+
+        window.onCustomHoursInput = function() {
+            document.querySelectorAll('.quick-hour-btn').forEach(btn => {
+                btn.classList.remove('border-forest-600', 'bg-forest-50', 'ring-2', 'ring-forest-600/20');
+                btn.classList.add('border-slate-200', 'bg-slate-50');
+            });
+            updateLiveCalc();
+        };
+
+        window.selectWorkerChip = function(name) {
+            document.getElementById('worker-name').value = name;
+            renderWorkerView();
+        };
+
+        window.onWorkerNameChange = function() {
+            renderWorkerView();
+        };
+
+        function updateWorkerChips() {
+            const uniqueNames = [...new Set(allRecords.map(r => normalizeName(r.workerName)).filter(Boolean))];
+            const container = document.getElementById('existing-workers-chips');
+            if (uniqueNames.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = `<span class="text-xs text-slate-400 py-1 mr-1">Registrados:</span>` +
+                uniqueNames.map(name => `
+                    <button type="button" onclick="selectWorkerChip('${escapeHtml(name)}')"
+                        class="text-xs bg-forest-50 hover:bg-forest-100 text-forest-800 border border-forest-200 font-semibold px-2.5 py-1 rounded-full transition">
+                        ${escapeHtml(name)}
+                    </button>
+                `).join('');
+        }
+
+        window.submitWorkHours = async function(e) {
+            e.preventDefault();
+            if (!currentUser || !db) {
+                showToast('Esperando conexión con el servidor...', 'error');
+                return;
+            }
+
+            const rawName = document.getElementById('worker-name').value;
+            const workerName = normalizeName(rawName);
+            const date = document.getElementById('work-date').value;
+            const hours = parseFloat(document.getElementById('work-hours').value);
+            const note = document.getElementById('work-note').value.trim();
+
+            if (!workerName) {
+                showToast('Por favor escribe tu nombre.', 'error');
+                return;
+            }
+            if (!hours || hours <= 0 || hours > 24) {
+                showToast('Ingresa una cantidad válida de horas (entre 0.5 y 24).', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('btn-submit-hours');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span>Guardando...</span>`;
+
+            try {
+                const logsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'work_logs');
+                const hpd = appSettings.horasPorDia || 8;
+                const tarifa = getTarifaByLabor(selectedLaborType);
+                const valorCalculado = Math.round((hours / hpd) * tarifa);
+
+                await addDoc(logsColRef, {
+                    workerName: workerName,
+                    date: date,
+                    hours: hours,
+                    tipoLabor: selectedLaborType, // 'normal' o 'guadana'
+                    valorCalculado: valorCalculado,
+                    note: note,
+                    status: 'pending',
+                    createdAt: Date.now()
+                });
+
+                lastSavedRecord = {
+                    workerName,
+                    date,
+                    hours,
+                    tipoLabor: selectedLaborType,
+                    valorCalculado,
+                    note
+                };
+
+                // Limpiar campos de horas y nota (mantener nombre, fecha y tipo de labor)
+                document.getElementById('work-hours').value = '';
+                document.getElementById('work-note').value = '';
+                onCustomHoursInput();
+
+                // Habilitar botón de aviso por WhatsApp
+                document.getElementById('worker-whatsapp-confirm').classList.remove('hidden');
+                updateAllWhatsAppLinks();
+
+                const labelLabor = selectedLaborType === 'guadana' ? 'Guadañando' : 'Normal';
+                showToast(`¡Listo! Se guardaron ${hours} hrs (${labelLabor} • ${formatCOP(valorCalculado)}).`, 'success');
+            } catch (error) {
+                console.error("Error guardando horas:", error);
+                showToast('No se pudieron guardar las horas. Intenta de nuevo.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i data-lucide="check-circle-2" class="w-6 h-6"></i><span>Guardar Mis Horas</span>`;
+                lucide.createIcons();
+            }
+        };
+
+        function renderWorkerView() {
+            const currentName = normalizeName(document.getElementById('worker-name').value);
+            const hoursPerDay = appSettings.horasPorDia || 8;
+
+            const myRecords = currentName
+                ? allRecords.filter(r => normalizeName(r.workerName).toLowerCase() === currentName.toLowerCase())
+                : [];
+
+            // Calcular horas pendientes de pago y dinero acumulado
+            const pendingRecords = myRecords.filter(r => r.status !== 'paid');
+            const totalPendingHours = pendingRecords.reduce((sum, r) => sum + Number(r.hours || 0), 0);
+            const totalPendingMoney = pendingRecords.reduce((sum, r) => sum + getRecordMoney(r), 0);
+
+            const completeDays = Math.floor(totalPendingHours / hoursPerDay);
+            const remainderHours = +(totalPendingHours % hoursPerDay).toFixed(2);
+            const progressPercent = Math.min(100, Math.round((remainderHours / hoursPerDay) * 100));
+
+            // Actualizar tarjeta de progreso
+            document.getElementById('worker-total-hours').textContent = `${totalPendingHours} h`;
+            document.getElementById('worker-total-days').textContent = `${completeDays} ${completeDays === 1 ? 'día' : 'días'}`;
+            document.getElementById('worker-total-money').textContent = formatCOP(totalPendingMoney);
+            document.getElementById('worker-fraction-text').textContent = `${remainderHours} / ${hoursPerDay} hrs (${progressPercent}%)`;
+            document.getElementById('worker-progress-bar').style.width = `${progressPercent}%`;
+
+            // Actualizar historial
+            document.getElementById('worker-history-count').textContent = `${myRecords.length} ${myRecords.length === 1 ? 'registro' : 'registros'}`;
+            const historyList = document.getElementById('worker-history-list');
+
+            if (!currentName) {
+                historyList.innerHTML = `<p class="text-sm text-slate-500 text-center py-6">Escribe tu nombre arriba para ver tus horas registradas.</p>`;
+                return;
+            }
+
+            if (myRecords.length === 0) {
+                historyList.innerHTML = `<p class="text-sm text-slate-500 text-center py-6">Aún no tienes horas registradas con el nombre <strong>${escapeHtml(currentName)}</strong>.</p>`;
+                return;
+            }
+
+            historyList.innerHTML = myRecords.map(rec => {
+                const isPaid = rec.status === 'paid';
+                const isGuadana = rec.tipoLabor === 'guadana';
+                const valor = getRecordMoney(rec);
+                return `
+                    <div class="flex items-center justify-between p-3.5 rounded-xl border ${isPaid ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-slate-200 shadow-xs'}">
+                        <div class="space-y-1 pr-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="font-bold text-slate-900 text-sm">${formatDateEs(rec.date)}</span>
+                                ${isGuadana
+                                    ? `<span class="text-[11px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Guadañando</span>`
+                                    : `<span class="text-[11px] font-bold bg-forest-100 text-forest-800 px-2 py-0.5 rounded-full">Normal</span>`
+                                }
+                                ${isPaid
+                                    ? `<span class="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Pagado</span>`
+                                    : `<span class="text-[11px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Pendiente</span>`
+                                }
+                            </div>
+                            ${rec.note ? `<p class="text-xs text-slate-600">${escapeHtml(rec.note)}</p>` : `<p class="text-xs text-slate-400 italic">Sin nota adicional</p>`}
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-base font-extrabold text-forest-800 block">${rec.hours} hrs</span>
+                            <span class="text-xs font-bold text-emerald-700">${formatCOP(valor)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // LÓGICA DEL ADMINISTRADOR
+        // ==========================================
+        window.openAdminGate = function() {
+            if (isAdminAuthenticated) {
+                navigateTo('admin');
+                return;
+            }
+            document.getElementById('input-admin-pin').value = '';
+            document.getElementById('modal-admin-pin').classList.remove('hidden');
+            setTimeout(() => document.getElementById('input-admin-pin').focus(), 100);
+        };
+
+        window.closeAdminGate = function() {
+            document.getElementById('modal-admin-pin').classList.add('hidden');
+        };
+
+        window.verifyAdminPin = function(e) {
+            e.preventDefault();
+            const enteredPin = document.getElementById('input-admin-pin').value.trim();
+            if (enteredPin === String(appSettings.pinAdmin)) {
+                isAdminAuthenticated = true;
+                closeAdminGate();
+                navigateTo('admin');
+                showToast('Bienvenido al panel de administrador.', 'success');
+            } else {
+                showToast('PIN incorrecto. Intenta de nuevo.', 'error');
+                document.getElementById('input-admin-pin').value = '';
+            }
+        };
+
+        window.toggleAdminSettings = function() {
+            const panel = document.getElementById('admin-settings-panel');
+            panel.classList.toggle('hidden');
+        };
+
+        window.saveAdminSettings = async function() {
+            if (!currentUser || !db) return;
+            const horasPorDia = parseFloat(document.getElementById('cfg-hours-per-day').value);
+            const tarifaNormal = parseFloat(document.getElementById('cfg-tarifa-normal').value) || 0;
+            const tarifaGuadana = parseFloat(document.getElementById('cfg-tarifa-guadana').value) || 0;
+            const adminPhoneRaw = document.getElementById('cfg-admin-phone').value.trim();
+            const adminPhone = normalizeColombianPhone(adminPhoneRaw);
+            const pinAdmin = document.getElementById('cfg-admin-pin').value.trim();
+
+            if (!horasPorDia || horasPorDia <= 0) {
+                showToast('Las horas por día deben ser mayores a 0.', 'error');
+                return;
+            }
+            if (!pinAdmin || pinAdmin.length < 4) {
+                showToast('El PIN debe tener al menos 4 números.', 'error');
+                return;
+            }
+
+            try {
+                const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'general');
+                await setDoc(configDocRef, {
+                    horasPorDia,
+                    tarifaNormal,
+                    tarifaGuadana,
+                    adminPhone,
+                    pinAdmin,
+                    workerPhones
+                }, { merge: true });
+                toggleAdminSettings();
+                showToast('Configuración guardada correctamente.', 'success');
+            } catch (error) {
+                console.error("Error guardando configuración:", error);
+                showToast('Error al guardar la configuración.', 'error');
+            }
+        };
+
+        window.renderAdminView = function() {
+            const hoursPerDay = appSettings.horasPorDia || 8;
+            const tarifaNormal = appSettings.tarifaNormal || 60000;
+            const tarifaGuadana = appSettings.tarifaGuadana || 100000;
+
+            // Actualizar opciones del filtro de trabajadores preservando la selección actual
+            const filterWorkerSelect = document.getElementById('filter-worker');
+            const selectedWorkerFilter = filterWorkerSelect.value;
+            const uniqueWorkers = [...new Set(allRecords.map(r => normalizeName(r.workerName)).filter(Boolean))].sort();
+
+            filterWorkerSelect.innerHTML = `<option value="ALL">Todos los trabajadores (${uniqueWorkers.length})</option>` +
+                uniqueWorkers.map(w => `<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('');
+
+            if (uniqueWorkers.includes(selectedWorkerFilter) || selectedWorkerFilter === 'ALL') {
+                filterWorkerSelect.value = selectedWorkerFilter;
+            }
+
+            const statusFilter = document.getElementById('filter-status').value;
+
+            // 1. Calcular Estadísticas Globales de Registros Pendientes
+            const allPending = allRecords.filter(r => r.status !== 'paid');
+            const totalPendingHours = allPending.reduce((acc, r) => acc + Number(r.hours || 0), 0);
+            const totalCompleteDays = Math.floor(totalPendingHours / hoursPerDay);
+            const totalRemHours = +(totalPendingHours % hoursPerDay).toFixed(2);
+            const totalMoney = allPending.reduce((acc, r) => acc + getRecordMoney(r), 0);
+
+            document.getElementById('admin-stat-hours').textContent = `${totalPendingHours} h`;
+            document.getElementById('admin-stat-records-count').textContent = `${allPending.length} registros sin pagar`;
+            document.getElementById('admin-stat-days').textContent = `${totalCompleteDays} ${totalCompleteDays === 1 ? 'día' : 'días'}`;
+            document.getElementById('admin-stat-rem-hours').textContent = `+ ${totalRemHours} horas sueltas`;
+            document.getElementById('admin-stat-money').textContent = formatCOP(totalMoney);
+            document.getElementById('admin-stat-rate-info').textContent = `Normal ${formatCOP(tarifaNormal)} | Guadaña ${formatCOP(tarifaGuadana)}`;
+
+            // 2. Resumen por Trabajador (Desglose Normal vs Guadañando)
+            const summaryContainer = document.getElementById('admin-workers-summary');
+            const workerMap = {};
+            allPending.forEach(rec => {
+                const name = normalizeName(rec.workerName);
+                if (!workerMap[name]) {
+                    workerMap[name] = {
+                        horasNormal: 0,
+                        horasGuadana: 0,
+                        totalHoras: 0,
+                        totalDinero: 0
+                    };
+                }
+                const h = Number(rec.hours || 0);
+                if (rec.tipoLabor === 'guadana') {
+                    workerMap[name].horasGuadana += h;
+                } else {
+                    workerMap[name].horasNormal += h;
+                }
+                workerMap[name].totalHoras += h;
+                workerMap[name].totalDinero += getRecordMoney(rec);
+            });
+
+            const workerEntries = Object.entries(workerMap);
+            if (workerEntries.length === 0) {
+                summaryContainer.innerHTML = `<p class="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-xl">No hay horas pendientes de liquidación.</p>`;
+            } else {
+                summaryContainer.innerHTML = workerEntries.map(([wName, stats]) => {
+                    const diasNormal = +(stats.horasNormal / hoursPerDay).toFixed(2);
+                    const diasGuadana = +(stats.horasGuadana / hoursPerDay).toFixed(2);
+                    const savedPhone = workerPhones[wName] || '';
+                    const waHref = buildWhatsAppUrl(buildSummaryText(wName) || '', savedPhone);
+
+                    return `
+                        <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col gap-3">
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-extrabold text-slate-900 text-base">${escapeHtml(wName)}</h4>
+                                        ${savedPhone ? `<span class="text-[11px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">📱 +${escapeHtml(savedPhone)}</span>` : ''}
+                                    </div>
+                                    <div class="flex flex-wrap gap-2 mt-1.5">
+                                        ${stats.horasNormal > 0 ? `
+                                            <span class="text-xs font-semibold bg-forest-100 text-forest-900 px-2.5 py-1 rounded-lg">
+                                                Normal: <strong>${stats.horasNormal}h</strong> (${diasNormal} días)
+                                            </span>
+                                        ` : ''}
+                                        ${stats.horasGuadana > 0 ? `
+                                            <span class="text-xs font-semibold bg-amber-100 text-amber-900 px-2.5 py-1 rounded-lg">
+                                                Guadaña: <strong>${stats.horasGuadana}h</strong> (${diasGuadana} días)
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div class="text-left sm:text-right">
+                                    <span class="text-xs text-slate-500 block">Total a Pagar (${stats.totalHoras}h)</span>
+                                    <span class="font-extrabold text-emerald-700 text-xl">${formatCOP(stats.totalDinero)}</span>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-2.5">
+                                <button type="button" onclick="openSendAppModal('${escapeHtml(wName)}')"
+                                    class="bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 transition">
+                                    <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                                    <span>Enviar App</span>
+                                </button>
+                                <a href="${waHref}" target="_blank" rel="noopener noreferrer"
+                                    onclick="handleWorkerWhatsAppClick(event, '${escapeHtml(wName)}')"
+                                    class="bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition shadow-xs cursor-pointer no-underline">
+                                    <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+                                    <span>Enviar Cuenta WhatsApp</span>
+                                </a>
+                                <button onclick="confirmPayWorker('${escapeHtml(wName)}')" class="bg-forest-700 hover:bg-forest-800 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition shadow-xs">
+                                    Liquidar a ${escapeHtml(wName.split(' ')[0])}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // 3. Listado Filtrado de Todos los Registros
+            const filteredRecords = allRecords.filter(rec => {
+                const matchWorker = filterWorkerSelect.value === 'ALL' || normalizeName(rec.workerName) === filterWorkerSelect.value;
+                const matchStatus = statusFilter === 'ALL' || (rec.status || 'pending') === statusFilter;
+                return matchWorker && matchStatus;
+            });
+
+            const listContainer = document.getElementById('admin-records-list');
+            if (filteredRecords.length === 0) {
+                listContainer.innerHTML = `<p class="text-sm text-slate-500 text-center py-6">No hay registros que coincidan con el filtro.</p>`;
+                lucide.createIcons();
+                updateAllWhatsAppLinks();
+                return;
+            }
+
+            listContainer.innerHTML = filteredRecords.map(rec => {
+                const isPaid = rec.status === 'paid';
+                const isGuadana = rec.tipoLabor === 'guadana';
+                const moneyVal = getRecordMoney(rec);
+
+                return `
+                    <div class="p-4 rounded-xl border ${isPaid ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-300 shadow-xs'} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-extrabold text-slate-900">${escapeHtml(rec.workerName)}</span>
+                                <span class="text-xs text-slate-500 font-medium">• ${formatDateEs(rec.date)}</span>
+                                ${isGuadana
+                                    ? `<span class="text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">Guadañando</span>`
+                                    : `<span class="text-[11px] font-bold bg-forest-100 text-forest-800 border border-forest-200 px-2 py-0.5 rounded-full">Normal</span>`
+                                }
+                                ${isPaid
+                                    ? `<span class="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Pagado</span>`
+                                    : `<span class="text-[11px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">Pendiente</span>`
+                                }
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <span class="font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg">
+                                    ${rec.hours} horas
+                                </span>
+                                <span class="font-extrabold text-emerald-700">${formatCOP(moneyVal)}</span>
+                            </div>
+                            ${rec.note ? `<p class="text-xs text-slate-600 pt-0.5">Labor: ${escapeHtml(rec.note)}</p>` : ''}
+                        </div>
+
+                        <div class="flex items-center gap-1.5 self-end sm:self-center">
+                            <button onclick="toggleRecordPaid('${rec.id}', '${rec.status || 'pending'}')"
+                                title="${isPaid ? 'Marcar como pendiente' : 'Marcar como pagado'}"
+                                class="${isPaid ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-emerald-600 text-white hover:bg-emerald-700'} px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1 transition">
+                                <i data-lucide="${isPaid ? 'rotate-ccw' : 'check'}" class="w-3.5 h-3.5"></i>
+                                <span>${isPaid ? 'Deshacer' : 'Pagar'}</span>
+                            </button>
+                            <button onclick="openEditModal('${rec.id}')" title="Editar registro"
+                                class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="confirmDeleteRecord('${rec.id}')" title="Eliminar registro"
+                                class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+            updateAllWhatsAppLinks();
+        };
+
+        // Acciones CRUD del Administrador
+        window.toggleRecordPaid = async function(recordId, currentStatus) {
+            if (!currentUser || !db) return;
+            const newStatus = currentStatus === 'paid' ? 'pending' : 'paid';
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'work_logs', recordId);
+                await updateDoc(docRef, { status: newStatus });
+                showToast(newStatus === 'paid' ? 'Registro marcado como pagado.' : 'Registro vuelto a pendiente.', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al actualizar estado.', 'error');
+            }
+        };
+
+        window.confirmPayWorker = function(workerName) {
+            const pending = allRecords.filter(r => normalizeName(r.workerName) === workerName && r.status !== 'paid');
+            if (pending.length === 0) return;
+            const totalHrs = pending.reduce((s, r) => s + Number(r.hours || 0), 0);
+            const totalDinero = pending.reduce((s, r) => s + getRecordMoney(r), 0);
+
+            openConfirmModal(
+                `Liquidar a ${workerName}`,
+                `¿Deseas marcar como PAGADOS los ${pending.length} registros pendientes (${totalHrs} horas • ${formatCOP(totalDinero)}) de ${workerName}?`,
+                async () => {
+                    try {
+                        for (const item of pending) {
+                            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'work_logs', item.id);
+                            await updateDoc(docRef, { status: 'paid' });
+                        }
+                        showToast(`¡Jornales de ${workerName} liquidados!`, 'success');
+                    } catch (err) {
+                        console.error(err);
+                        showToast('Error al liquidar registros.', 'error');
+                    }
+                }
+            );
+        };
+
+        window.confirmDeleteRecord = function(recordId) {
+            openConfirmModal(
+                'Eliminar registro',
+                '¿Estás seguro de eliminar este registro de horas? Esta acción no se puede deshacer.',
+                async () => {
+                    try {
+                        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'work_logs', recordId);
+                        await deleteDoc(docRef);
+                        showToast('Registro eliminado.', 'success');
+                    } catch (err) {
+                        console.error(err);
+                        showToast('Error al eliminar registro.', 'error');
+                    }
+                }
+            );
+        };
+
+        // Modal de Edición
+        window.openEditModal = function(recordId) {
+            const rec = allRecords.find(r => r.id === recordId);
+            if (!rec) return;
+            document.getElementById('edit-record-id').value = rec.id;
+            document.getElementById('edit-worker-name').value = rec.workerName;
+            document.getElementById('edit-tipo-labor').value = rec.tipoLabor || 'normal';
+            document.getElementById('edit-work-date').value = rec.date;
+            document.getElementById('edit-work-hours').value = rec.hours;
+            document.getElementById('edit-work-note').value = rec.note || '';
+            document.getElementById('edit-work-status').value = rec.status || 'pending';
+            document.getElementById('modal-edit').classList.remove('hidden');
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('modal-edit').classList.add('hidden');
+        };
+
+        window.saveEditedRecord = async function(e) {
+            e.preventDefault();
+            if (!currentUser || !db) return;
+            const id = document.getElementById('edit-record-id').value;
+            const workerName = normalizeName(document.getElementById('edit-worker-name').value);
+            const tipoLabor = document.getElementById('edit-tipo-labor').value;
+            const date = document.getElementById('edit-work-date').value;
+            const hours = parseFloat(document.getElementById('edit-work-hours').value);
+            const note = document.getElementById('edit-work-note').value.trim();
+            const status = document.getElementById('edit-work-status').value;
+
+            const hpd = appSettings.horasPorDia || 8;
+            const tarifa = getTarifaByLabor(tipoLabor);
+            const valorCalculado = Math.round((hours / hpd) * tarifa);
+
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'work_logs', id);
+                await updateDoc(docRef, { workerName, tipoLabor, date, hours, valorCalculado, note, status });
+                closeEditModal();
+                showToast('Registro actualizado correctamente.', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al guardar cambios.', 'error');
+            }
+        };
+
+        // ==========================================
+        // ENLACES DE WHATSAPP NATIVOS Y EXPORTACIÓN
+        // ==========================================
+        function normalizeColombianPhone(rawPhone) {
+            if (!rawPhone) return '';
+            const digits = String(rawPhone).replace(/\D/g, '');
+            if (!digits) return '';
+            if (digits.startsWith('57') && digits.length >= 12) return digits;
+            if (digits.length === 10 && digits.startsWith('3')) return '57' + digits;
+            return digits;
+        }
+
+        function formatPhoneForInput(fullPhone) {
+            if (!fullPhone) return '';
+            const digits = String(fullPhone).replace(/\D/g, '');
+            if (digits.startsWith('57') && digits.length === 12) {
+                return digits.slice(2);
+            }
+            return digits;
+        }
+
+        function buildWhatsAppUrl(text, phone = '') {
+            const cleanPhone = normalizeColombianPhone(phone);
+            if (cleanPhone) {
+                return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+            }
+            return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+        }
+
+        function buildDirectWorkerUrl(workerName = '') {
+            const baseUrl = getShareableAppUrl();
+            if (!baseUrl) return '';
+            try {
+                const urlObj = new URL(baseUrl);
+                if (workerName) {
+                    urlObj.searchParams.set('trabajador', normalizeName(workerName));
+                } else {
+                    urlObj.searchParams.set('modo', 'trabajador');
+                }
+                return urlObj.toString();
+            } catch (e) {
+                const sep = baseUrl.includes('?') ? '&' : '?';
+                return workerName
+                    ? `${baseUrl}${sep}trabajador=${encodeURIComponent(normalizeName(workerName))}`
+                    : `${baseUrl}${sep}modo=trabajador`;
+            }
+        }
+
+        function buildInviteWorkerMessage(workerName = '') {
+            const cleanName = normalizeName(workerName);
+            const directUrl = buildDirectWorkerUrl(cleanName);
+            const saludo = cleanName ? `¡Hola *${cleanName}*! 👋🌱` : `¡Hola! 👋🌱`;
+
+            let msg = `${saludo}\n`;
+            msg += `Aquí tienes tu aplicación para anotar tus horas de trabajo cada día de forma súper fácil:\n\n`;
+            msg += `💰 *Tarifas del día (${appSettings.horasPorDia || 8} horas):*\n`;
+            msg += `• 🌱 Trabajo Normal: *${formatCOP(appSettings.tarifaNormal)}*\n`;
+            msg += `• ✂️ Guadañando: *${formatCOP(appSettings.tarifaGuadana)}*\n\n`;
+
+            if (directUrl) {
+                msg += `📲 *Entra directo aquí con tu nombre listo:*\n${directUrl}\n\n`;
+            }
+            msg += `✅ *¿Cómo usarla?*\n`;
+            msg += `1️⃣ Abre el enlace en tu celular.\n`;
+            msg += `2️⃣ Elige si trabajaste *Normal* o *Guadañando*.\n`;
+            msg += `3️⃣ Toca las horas (2h, 4h medio día o 8h día completo) y dale a *Guardar Mis Horas*.\n\n`;
+            msg += `💡 _Tip: Guárdala en la pantalla de inicio de tu celular para abrirla como una app._`;
+            return msg;
+        }
+
+        // Modal Enviar App a Trabajador
+        window.openSendAppModal = function(prefillName = '') {
+            const nameInput = document.getElementById('send-app-worker-name');
+            const phoneInput = document.getElementById('send-app-worker-phone');
+
+            nameInput.value = prefillName ? normalizeName(prefillName) : '';
+            const savedPhone = prefillName ? workerPhones[normalizeName(prefillName)] : '';
+            phoneInput.value = savedPhone ? formatPhoneForInput(savedPhone) : '';
+
+            // Chips rápidos de trabajadores registrados
+            const uniqueNames = [...new Set([...allRecords.map(r => normalizeName(r.workerName)), ...Object.keys(workerPhones)].filter(Boolean))];
+            const chipsContainer = document.getElementById('send-app-worker-chips');
+            if (uniqueNames.length > 0) {
+                chipsContainer.innerHTML = uniqueNames.map(n => `
+                    <button type="button" onclick="selectWorkerForInvite('${escapeHtml(n)}')"
+                        class="text-[11px] bg-forest-50 hover:bg-forest-100 text-forest-800 border border-forest-200 font-semibold px-2 py-0.5 rounded-full transition">
+                        ${escapeHtml(n)}
+                    </button>
+                `).join('');
+            } else {
+                chipsContainer.innerHTML = '';
+            }
+
+            onSendAppInputChange();
+            document.getElementById('modal-send-app').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.closeSendAppModal = function() {
+            document.getElementById('modal-send-app').classList.add('hidden');
+        };
+
+        window.selectWorkerForInvite = function(name) {
+            const cleanName = normalizeName(name);
+            document.getElementById('send-app-worker-name').value = cleanName;
+            const savedPhone = workerPhones[cleanName] || '';
+            document.getElementById('send-app-worker-phone').value = formatPhoneForInput(savedPhone);
+            onSendAppInputChange();
+        };
+
+        window.onSendAppInputChange = function() {
+            const workerName = document.getElementById('send-app-worker-name').value.trim();
+            const rawPhone = document.getElementById('send-app-worker-phone').value.trim();
+            const cleanPhone = normalizeColombianPhone(rawPhone);
+            const message = buildInviteWorkerMessage(workerName);
+
+            document.getElementById('send-app-preview-box').textContent = message;
+            const waBtn = document.getElementById('btn-confirm-send-wa');
+            waBtn.href = buildWhatsAppUrl(message, cleanPhone);
+        };
+
+        window.copyInviteMessage = function() {
+            const workerName = document.getElementById('send-app-worker-name').value.trim();
+            const message = buildInviteWorkerMessage(workerName);
+            copyTextToClipboard(message, '¡Mensaje con enlace copiado al portapapeles!');
+        };
+
+        window.executeSendAppWhatsApp = async function(event) {
+            const workerName = normalizeName(document.getElementById('send-app-worker-name').value);
+            const rawPhone = document.getElementById('send-app-worker-phone').value.trim();
+            const cleanPhone = normalizeColombianPhone(rawPhone);
+            const message = buildInviteWorkerMessage(workerName);
+
+            event.currentTarget.href = buildWhatsAppUrl(message, cleanPhone);
+            copyTextSilently(message);
+
+            // Guardar número asociado al trabajador en Firestore si ambos fueron ingresados
+            if (workerName && cleanPhone && currentUser && db) {
+                workerPhones[workerName] = cleanPhone;
+                try {
+                    const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'general');
+                    await setDoc(configDocRef, { workerPhones }, { merge: true });
+                } catch (e) {
+                    console.error('Error guardando teléfono del trabajador:', e);
+                }
+            }
+        };
+
+        window.openInstallModal = function() {
+            document.getElementById('modal-install-app').classList.remove('hidden');
+            lucide.createIcons();
+        };
+
+        window.closeInstallModal = function() {
+            document.getElementById('modal-install-app').classList.add('hidden');
+        };
+
+        function buildShareAppMessage() {
+            return buildInviteWorkerMessage('');
+        }
+
+        function buildWorkerReportMessage() {
+            if (!lastSavedRecord) return '';
+            const tipo = lastSavedRecord.tipoLabor === 'guadana' ? 'Guadañando ✂️' : 'Trabajo Normal 🌱';
+            let msg = `Hola Jefe 👋, soy *${lastSavedRecord.workerName}*. Ya anoté mis horas en la app:\n\n`;
+            msg += `📅 Fecha: *${formatDateEs(lastSavedRecord.date)}*\n`;
+            msg += `⏱️ Tiempo: *${lastSavedRecord.hours} horas*\n`;
+            msg += `🛠️ Labor: *${tipo}*\n`;
+            msg += `💰 Valor: *${formatCOP(lastSavedRecord.valorCalculado)}*`;
+            if (lastSavedRecord.note) {
+                msg += `\n📝 Nota: ${lastSavedRecord.note}`;
+            }
+            return msg;
+        }
+
+        function buildSummaryText(targetWorker = 'ALL') {
+            const hoursPerDay = appSettings.horasPorDia || 8;
+            const pending = allRecords.filter(r => {
+                const matchWorker = targetWorker === 'ALL' || normalizeName(r.workerName) === targetWorker;
+                return matchWorker && r.status !== 'paid';
+            });
+
+            if (pending.length === 0) return null;
+
+            let text = `*LIQUIDACIÓN DE HORAS Y JORNALES*\n`;
+            text += `_(1 día = ${hoursPerDay} hrs | Normal: ${formatCOP(appSettings.tarifaNormal)} | Guadaña: ${formatCOP(appSettings.tarifaGuadana)})_\n\n`;
+
+            const byWorker = {};
+            pending.forEach(r => {
+                const name = normalizeName(r.workerName);
+                if (!byWorker[name]) byWorker[name] = [];
+                byWorker[name].push(r);
+            });
+
+            for (const [name, recs] of Object.entries(byWorker)) {
+                let hrsNormal = 0;
+                let hrsGuadana = 0;
+                let totalPay = 0;
+
+                text += `👷 *${name}*\n`;
+                recs.forEach(r => {
+                    const isG = r.tipoLabor === 'guadana';
+                    const amt = getRecordMoney(r);
+                    if (isG) hrsGuadana += Number(r.hours || 0);
+                    else hrsNormal += Number(r.hours || 0);
+                    totalPay += amt;
+
+                    text += `• ${formatDateEs(r.date)}: *${r.hours}h* [${isG ? 'Guadaña' : 'Normal'}] = ${formatCOP(amt)}${r.note ? ` (${r.note})` : ''}\n`;
+                });
+
+                text += `──────────────\n`;
+                if (hrsNormal > 0) {
+                    text += `🌱 Normal: *${hrsNormal} hrs* (${+(hrsNormal / hoursPerDay).toFixed(2)} días)\n`;
+                }
+                if (hrsGuadana > 0) {
+                    text += `✂️ Guadañando: *${hrsGuadana} hrs* (${+(hrsGuadana / hoursPerDay).toFixed(2)} días)\n`;
+                }
+                text += `💰 *TOTAL A PAGAR: ${formatCOP(totalPay)}*\n\n`;
+            }
+
+            return text.trim();
+        }
+
+        window.updateAllWhatsAppLinks = function() {
+            const linkWorkerReport = document.getElementById('link-worker-notify-wa');
+            if (linkWorkerReport && lastSavedRecord) {
+                linkWorkerReport.href = buildWhatsAppUrl(buildWorkerReportMessage(), appSettings.adminPhone || '');
+            }
+
+            const linkAdminSummary = document.getElementById('link-admin-summary-wa');
+            if (linkAdminSummary) {
+                const filterWorker = document.getElementById('filter-worker')?.value || 'ALL';
+                const summaryText = buildSummaryText(filterWorker) || 'No hay horas pendientes por liquidar.';
+                const targetPhone = filterWorker !== 'ALL' ? (workerPhones[filterWorker] || '') : '';
+                linkAdminSummary.href = buildWhatsAppUrl(summaryText, targetPhone);
+            }
+        };
+
+        window.handleWhatsAppClick = function(event, mode) {
+            updateAllWhatsAppLinks();
+            let textToCopy = '';
+
+            if (mode === 'app') {
+                textToCopy = buildShareAppMessage();
+            } else if (mode === 'worker_report') {
+                textToCopy = buildWorkerReportMessage();
+                event.currentTarget.href = buildWhatsAppUrl(textToCopy, appSettings.adminPhone || '');
+            } else if (mode === 'admin_summary') {
+                const filterWorker = document.getElementById('filter-worker')?.value || 'ALL';
+                const summary = buildSummaryText(filterWorker);
+                if (!summary) {
+                    event.preventDefault();
+                    showToast('No hay horas pendientes para enviar.', 'error');
+                    return;
+                }
+                textToCopy = summary;
+                const targetPhone = filterWorker !== 'ALL' ? (workerPhones[filterWorker] || '') : '';
+                event.currentTarget.href = buildWhatsAppUrl(summary, targetPhone);
+            }
+
+            // Respaldo: copiar silenciosamente al portapapeles por si el entorno restringe abrir apps externas
+            if (textToCopy) {
+                copyTextSilently(textToCopy);
+            }
+        };
+
+        window.handleWorkerWhatsAppClick = function(event, workerName) {
+            const summary = buildSummaryText(workerName);
+            if (!summary) {
+                event.preventDefault();
+                showToast('No hay horas pendientes para este trabajador.', 'error');
+                return;
+            }
+            const savedPhone = workerPhones[workerName] || '';
+            event.currentTarget.href = buildWhatsAppUrl(summary, savedPhone);
+            copyTextSilently(summary);
+        };
+
+        window.copyAppLink = function() {
+            const url = buildDirectWorkerUrl('');
+            if (!url) {
+                showToast('Escribe o pega arriba el enlace publicado de tu app para copiarlo.', 'error');
+                return;
+            }
+            copyTextToClipboard(url, '¡Enlace directo para trabajadores copiado!');
+        };
+
+        window.handleWhatsAppClick = function(event, mode) {
+            updateAllWhatsAppLinks();
+            let textToCopy = '';
+
+            if (mode === 'app') {
+                textToCopy = buildShareAppMessage();
+            } else if (mode === 'worker_report') {
+                textToCopy = buildWorkerReportMessage();
+            } else if (mode === 'admin_summary') {
+                const filterWorker = document.getElementById('filter-worker')?.value || 'ALL';
+                const summary = buildSummaryText(filterWorker);
+                if (!summary) {
+                    event.preventDefault();
+                    showToast('No hay horas pendientes para enviar.', 'error');
+                    return;
+                }
+                textToCopy = summary;
+            }
+
+            // Respaldo: copiar silenciosamente al portapapeles por si el entorno restringe abrir apps externas
+            if (textToCopy) {
+                copyTextSilently(textToCopy);
+            }
+        };
+
+        window.handleWorkerWhatsAppClick = function(event, workerName) {
+            const summary = buildSummaryText(workerName);
+            if (!summary) {
+                event.preventDefault();
+                showToast('No hay horas pendientes para este trabajador.', 'error');
+                return;
+            }
+            event.currentTarget.href = buildWhatsAppUrl(summary);
+            copyTextSilently(summary);
+        };
+
+        window.copyAppLink = function() {
+            const url = getShareableAppUrl();
+            if (!url) {
+                showToast('Escribe o pega arriba el enlace publicado de tu app para copiarlo.', 'error');
+                return;
+            }
+            copyTextToClipboard(url, '¡Enlace copiado! Ya puedes pegarlo en WhatsApp.');
+        };
+
+        window.copySummaryForWhatsApp = function() {
+            const filterWorker = document.getElementById('filter-worker').value;
+            const text = buildSummaryText(filterWorker);
+            if (!text) {
+                showToast('No hay horas pendientes para resumir.', 'error');
+                return;
+            }
+            copyTextToClipboard(text, 'Resumen copiado. ¡Listo para pegar en WhatsApp!');
+        };
+
+        window.exportToCSV = function() {
+            if (allRecords.length === 0) {
+                showToast('No hay registros para exportar.', 'error');
+                return;
+            }
+            const hoursPerDay = appSettings.horasPorDia || 8;
+
+            let csv = 'Trabajador,Tipo_Labor,Fecha,Horas,Equivalente_Dias,Valor_COP,Estado,Nota\n';
+            allRecords.forEach(r => {
+                const equiv = +(r.hours / hoursPerDay).toFixed(2);
+                const val = getRecordMoney(r);
+                const tipoText = r.tipoLabor === 'guadana' ? 'Guadanando' : 'Normal';
+                const statusText = r.status === 'paid' ? 'Pagado' : 'Pendiente';
+                const safeNote = `"${(r.note || '').replace(/"/g, '""')}"`;
+                const safeName = `"${(r.workerName || '').replace(/"/g, '""')}"`;
+                csv += `${safeName},${tipoText},${r.date},${r.hours},${equiv},${val},${statusText},${safeNote}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `jornales_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Archivo CSV descargado.', 'success');
+        };
+
+        // ==========================================
+        // UTILIDADES Y COMPONENTES DE UI
+        // ==========================================
+        function normalizeName(str) {
+            if (!str) return '';
+            return str.trim().replace(/\s+/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function formatCOP(amount) {
+            return '$' + Math.round(amount || 0).toLocaleString('es-CO');
+        }
+
+        function formatDateEs(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            return `${parseInt(parts[2], 10)} ${months[parseInt(parts[1], 10) - 1]} ${parts[0]}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyTextSilently(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+            } catch (e) {
+                // Ignorar error silenciosamente
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function copyTextToClipboard(text, successMsg) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast(successMsg, 'success');
+            } catch (err) {
+                showToast('No se pudo copiar automáticamente.', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-900 text-white';
+            toast.className = `${bgClass} px-4 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center justify-between gap-3 pointer-events-auto transition-all duration-300`;
+            toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            pendingConfirmCallback = onConfirm;
+            document.getElementById('modal-confirm').classList.remove('hidden');
+
+            document.getElementById('confirm-btn-ok').onclick = async () => {
+                closeConfirmModal();
+                if (pendingConfirmCallback) await pendingConfirmCallback();
+            };
+        }
+
+        window.closeConfirmModal = function() {
+            document.getElementById('modal-confirm').classList.add('hidden');
+            pendingConfirmCallback = null;
+        };
+
+        // Iniciar aplicación
+        initFirebase();
+    </script>
+</body>
+</html>
